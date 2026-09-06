@@ -5,6 +5,8 @@ description: Export design tokens - variables, collections, modes.
 
 # figma-tokens
 
+Quick export only. For full 50-950 systems with Light/Dark modes and contrast checks use `/figma-vars-create` instead.
+
 Export Variables API tokens from the file.
 
 ## Workflow

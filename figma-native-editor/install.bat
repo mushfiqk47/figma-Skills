@@ -9,7 +9,7 @@ if %errorlevel%==0 (
 )
 echo.
 echo Next:
-echo 1. Set FIGMA_API_KEY env from Figma Account Settings
+echo 1. OAuth only, no API key: in Claude Code run /mcp, select figma, Authenticate
 echo 2. In Claude Code: /plugin install ./figma-native-editor
 echo 3. Paste your figma.com/design/... URL in chat to edit natively
 pause

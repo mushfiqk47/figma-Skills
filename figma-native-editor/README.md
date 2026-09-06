@@ -15,7 +15,7 @@ claude plugin list   # figma@claude-plugins-official, enabled
 claude mcp list      # https://mcp.figma.com/mcp, Connected
 ```
 
-Auth is OAuth via the remote MCP server. If it ever asks, run `/mcp` in Claude Code, select `figma`, then Authenticate and Allow Access. There is no token to copy and no `FIGMA_API_KEY` to set.
+Auth is OAuth via the remote MCP server. If it ever asks, run `/mcp` in Claude Code, select `figma`, then Authenticate and Allow Access. There is no token to copy and nothing secret to set.
 
 To use this local wrapper as well:
 
@@ -39,9 +39,12 @@ echo '<instruction> + file URL' | claude -p --allow-dangerously-skip-permissions
    - `create a primary button, red` — native auto-layout button
    - `create variables and bind everything` — tokens for color, font, padding, radius, spacing
    - `export this frame as code` — dev-ready code
+   - `build my full token system` — runs `/figma-vars-create`: 50-950 ramps, Light + Dark, contrast-checked
+   - `connect tokens to this frame` — runs `/figma-vars-connect`: every property bound, design unchanged
+   - `audit everything` — runs `/figma-audit`: scored report with fix list
 3. Every edit returns node IDs so the next step can build on it.
 
-Commands in `commands/`: `figma-inspect`, `figma-code`, `figma-tokens`, `figma-assets`.
+Commands in `commands/`: `figma-inspect`, `figma-code`, `figma-tokens`, `figma-assets`, plus the token pipeline: `figma-vars-create` (full system), `figma-vars-connect` (bind all), `figma-audit` (scored report).
 Skill in `skills/figma-native/SKILL.md`. Agent in `agents/figma-editor.md`.
 
 ## Edit rules (built in)

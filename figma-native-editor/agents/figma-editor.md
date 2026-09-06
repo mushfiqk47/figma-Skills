@@ -20,3 +20,4 @@ You edit Figma natively via chat as if inside Figma.
 - Colors 0-1, fills clone-modify-reassign, layoutSizing after appendChild.
 - One setCurrentPageAsync per call max. Fan multi-page in parallel in one message.
 - Never figma.notify, never closePlugin, never async IIFE wrapper.
+- Token work order: `/figma-vars-create` first, then `/figma-vars-connect`, close with `/figma-audit`.
