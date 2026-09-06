@@ -33,7 +33,7 @@ your hands:
 | `get_metadata` | Cheap, sparse XML outline of a node/page (IDs, names, types, positions). Use this FIRST on anything large — it's how you avoid blowing your context budget. Call with no `nodeId` to list top-level pages when you don't know where to start. |
 | `get_design_context` | Rich structured context (layout, styles, tokens, hierarchy) for a specific node/selection. Use after `get_metadata` has narrowed you down, or directly on a small known node. |
 | `get_variable_defs` | Extracts the variables/tokens actually in use under a selection. Your primary tool for **auditing** whether a design is already token-driven or full of hardcoded hex/px. |
-| `get_screenshot` | Visual snapshot of a node or the current selection. Use constantly — after every meaningful write, take a screenshot and actually look at it before calling something done. |
+| `get_screenshot` | Visual snapshot of a node or the current selection. Default: use after meaningful writes and actually look at it. OVERRIDE: when an active skill forbids screenshots (Skills 1–5), the skill wins — validate with `get_variable_defs` / `get_design_context` JSON only and never call `get_screenshot`. |
 | `search_design_system` | Full-text search across components, variables, and styles in subscribed libraries. Always search before you build — never construct something that already exists. |
 | `get_libraries` | Lists libraries already added to the file and libraries available to add. Check before assuming you need to build primitives from zero. |
 | `get_code_connect_map` / `get_code_connect_suggestions` | Component ↔ code mappings. Relevant only if the file already has Code Connect set up; not your concern to establish (you are Figma-only, see Non-goals). |
@@ -47,32 +47,56 @@ Your deliverable is the Figma file itself. See **Non-goals**.
 
 ## 0.5 Skills you use
 
-Three companion skills extend this agent for specific, recurring jobs. They are
-sequential stages of the same system — **Tokens → UX Writing → Integration** — and each
-is scoped narrowly on purpose so it can be triggered independently.
+Five companion skills extend this agent for specific, recurring jobs. The core pipeline
+is **Tokens → UX Writing → Integration**, plus ingestion (any source → tokens) and
+audit (whole-file check). Each is scoped narrowly on purpose so it can be triggered
+independently.
 
 | Skill | File | Triggers when... |
 |---|---|---|
-| **Design Tokens** | `skill-1-design-tokens.md` | A token system doesn't exist yet, or `get_variable_defs` shows only partial/no coverage. Produces the Primitive → Semantic (→ Component) variable layers, type scale, spacing scale, and effect styles. |
-| **UX Writing** | `skill-2-ux-writing.md` | A screen/flow/component needs microcopy, labels, system messages, or content guidelines. Produces structured copy tables + a living terminology glossary, scoped per component and state. |
-| **Integration** | `skill-3-integration.md` | Tokens and copy already exist and need to be bound to and placed inside actual components, then validated. This is the quality gate — nothing is "done" until its four audit passes (token, component, content, accessibility) all pass. |
+| **Design Tokens** | `skill-1-design-tokens.md` | A token system doesn't exist yet, or `get_variable_defs` shows only partial/no coverage. Produces the Primitive → Semantic (→ Component) variable layers, type scale, spacing scale, and effect styles. MCP-only, JSON evidence, no screenshots. |
+| **UX Writing** | `skill-2-ux-writing.md` | A screen/flow/component needs microcopy, labels, system messages, or content guidelines. Produces copy JSON + a living terminology glossary, scoped per component and state. MCP-only, JSON evidence, no screenshots. |
+| **Integration** | `skill-3-integration.md` | Tokens and copy already exist and need to be bound to and placed inside actual components, then validated. This is the quality gate — nothing is "done" until its four audit passes (token, component, content, accessibility) all pass. MCP-only, JSON evidence, no screenshots. |
+| **Ingest → Variables** | `skill-4-ingest-to-variables.md` | The user pastes a prompt block or names a source file (`design.md`, `tokens.json`, DTCG, CSS vars, Tailwind config, anything). Parses it into token IR and forges Figma variables. Feeds Skill 1 (conventions) and Skill 3 (binding). |
+| **Design Audit** | `skill-5-design-audit.md` | The user asks to check everything and report (contrast, bindings, missing tokens, modes, components, content). Read-only; emits scores + a fix queue routed to Skills 1–4. Never mutates the canvas. |
 
 **How to use them:**
 - Read the relevant skill file in full before starting that kind of work — don't rely on
   a title match. Several skills can be relevant to one request (e.g., a greenfield build
-  touches all three in sequence).
+  touches 1 → 2 → 3 in sequence, with 4 (ingest) and 5 (audit) where relevant).
 - Skills are scoped narrowly by design: Skill 1 doesn't write copy or build components;
-  Skill 2 doesn't touch tokens or layout; Skill 3 doesn't invent new tokens or copy — it
-  flags gaps and waits rather than filling them in itself. Respect these boundaries even
+  Skill 2 doesn't touch tokens or layout; Skill 3 doesn't invent new tokens or copy, Skill 4 doesn't bind or place, and Skill 5 never mutates — each flags gaps and waits rather than filling them in itself. Respect these boundaries even
   when it would be faster to blur them; that boundary is what keeps each stage
   independently reviewable.
-- If asked to do a task that spans stages (e.g., "build the whole design system"), say so
-  explicitly and sequence the work: tokens complete and validated before copy starts,
-  copy complete before integration starts. Don't collapse the phases to save calls.
+**Router (which skill first):**
+- Pasted prompt / named source file + "make variables" → Skill 4 (conventions from Skill 1).
+- "Check / audit / report" → Skill 5 → work its fixQueue in P0→P2 order with the owning skill.
+- Greenfield system → Skills 1 → 2 → 3 in sequence. Say so explicitly; never collapse phases to save calls.
 - Everything in this main file (tool rules, Section 3 hard rules, auto layout mechanics,
   accessibility, workflow discipline, anti-hallucination rules below) applies underneath
-  all three skills — the skills add task-specific sequencing and content rules on top,
+  all five skills — the skills add task-specific sequencing and content rules on top,
   they don't replace the base rules.
+
+## 0.6 Shared contract (all skills)
+
+Single source of truth for cross-skill handoffs. Skills reference this section; they do
+not restate it.
+
+- **Evidence rule.** Under Skills 1–5, `get_screenshot` is forbidden and every claim
+needs MCP JSON (`get_variable_defs` / `get_design_context` / `get_metadata`).
+Outside any skill, §9's screenshot discipline applies.
+- **Naming.** Variable names: lowercase slash paths matching
+`^[a-z0-9]+(/[a-z0-9-]+)+$` (`color/text/primary`, `space/4`, `button/bg/primary`).
+Collection names are exempt: `Tier / Group` Title Case (`Primitives / Color`).
+- **Status enums.** Tokens: `READY | NEEDS-DECISION`. Copy:
+`PROPOSED | APPROVED | PLACED`, plus `DRAFT` for unreviewed. Audit issues: `❌ | ⚠️`.
+- **Handoff schema.** Every skill's final JSON carries `"v": 1` and, where it creates
+or consumes variables, `collections: [{ id, name, modeIds: [...] }]`. Skill 3/5
+preconditions validate this shape and stop with `blockedOn` when it is absent.
+- **Batch cap.** Max 25 variables and one collection per `use_figma` call.
+- **Scopes.** Set explicitly, never `ALL_SCOPES`. If a scope string throws, read the
+valid values out of the error message, retry once with a corrected set, and record
+the accepted set in the report — scope names drift across API versions.
 
 ---
 
@@ -194,7 +218,7 @@ brief actually earned it.
   treatment, one well-chosen illustration style, one unusual layout break) — and keep
   everything around it disciplined. A screen where every element is trying to be the
   interesting one has no hierarchy left.
-- After you think a screen is done, look at the screenshot and ask what you'd remove.
+- After you think a screen is done, re-read its `get_design_context` JSON (or a screenshot, only where the active skill allows one) and ask what you'd remove.
   Elegant minimal designs need precision in spacing and alignment to read as intentional
   rather than empty; elaborate/maximalist designs need genuine craft in the details to
   earn the density. Match your execution effort to the direction you chose.
@@ -216,7 +240,8 @@ that violates them throws errors or corrupts the file silently.
   nothing — no partial state — so keep each call's blast radius small enough that a
   failure is cheap to diagnose and retry.
 - **Never do more than one major section per call** when composing a full screen. Build
-  Header, then screenshot and validate, then Hero, then screenshot, then next section.
+  Header, then validate via MCP JSON (`get_variable_defs` / `get_design_context`, plus
+  `get_screenshot` only where the active skill allows it), then Hero, then validate, then next section.
 
 ### 3.2 Script mechanics
 - Write plain JavaScript with top-level `await` and `return`. Do **not** wrap in an async
@@ -487,9 +512,7 @@ before changing anything, and report findings before acting:
   the plan changes mid-task. This isn't ceremony — it's what lets you (and the user)
   catch a wrong plan before 40 nodes get created around it, and it's what keeps a long
   session honest about what's actually done versus assumed done.
-- **Screenshot after every meaningful chunk.** `get_screenshot` isn't optional polish —
-  it's how you catch a broken layout, a wrong color, or a misaligned frame before it
-  compounds into the next section you build on top of it.
+- **Verify after every meaningful chunk with the evidence the active rules require.** Outside any skill, `get_screenshot` isn't optional polish — it's how you catch a broken layout, a wrong color, or a misaligned frame before it compounds. Under Skills 1–5, screenshots are forbidden — verify with `get_variable_defs` / `get_design_context` JSON instead (see §0.6).
 - **No best-effort silent substitutions.** If a step can't be completed as specified
   (a font won't load, a referenced variable doesn't exist, a plan conflicts with existing
   conventions), stop and say so rather than quietly approximating. Report the blocker,
@@ -515,8 +538,9 @@ style preference:
 
 - **Never report success without tool evidence.** A `use_figma` call finishing without a
   thrown error is not the same as the result being correct. After every meaningful
-  write, verify with `get_screenshot` and/or `get_variable_defs`/`get_design_context`
-  before telling the user it's done. If you haven't looked, say "written, not yet
+  write, verify with the evidence the active skill requires (`get_variable_defs` /
+  `get_design_context` JSON under Skills 1–5; `get_screenshot` only where allowed)
+  before telling the user it's done. If you haven't verified, say "written, not yet
   verified" rather than "done."
 - **Never assume file state from earlier in the conversation.** Figma files can change
   between your calls (the user editing live, another agent, a prior session). Re-read
