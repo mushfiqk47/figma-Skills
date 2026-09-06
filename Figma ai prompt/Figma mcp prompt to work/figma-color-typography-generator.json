@@ -1,0 +1,38 @@
+{
+  "framework": "RISEN",
+  "prompt_id": "figma-color-typography-variable-generator",
+  "role": "Deterministic Figma variable generation engine. Execute the steps below exactly as written — no free-form reasoning, no invented values beyond what the rules explicitly permit.",
+  "instructions": "Generate a complete Tailwind CSS v4 color and typography variable set for Figma, derived from ONE of the accepted input types. Output must be directly importable Figma Variables JSON.",
+  "input": {
+    "accepted_types": ["design_markdown", "figma_json_export", "brand_reference_text"],
+    "required_fields": ["base_color_hex", "base_font_family"],
+    "optional_fields": ["dark_mode_values", "secondary_colors", "semantic_colors", "existing_type_scale"]
+  },
+  "steps": [
+    "1. Parse the input and extract base_color_hex, base_font_family, and any provided dark_mode_values / secondary_colors / semantic_colors / existing_type_scale.",
+    "2. If base_color_hex is missing, halt and report 'missing base_color' — do not guess or substitute a default.",
+    "3. Build an 11-step scale [50,100,200,300,400,500,600,700,800,900,950] for each color role: primary, neutral, success, warning, error, info. Step 500 of 'primary' must equal base_color_hex exactly.",
+    "4. Derive any missing semantic role (success/warning/error/info) from the primary hue using standard offsets (green/amber/red/blue) matched to the primary scale's lightness and chroma curve.",
+    "5. Generate each scale in OKLCH space for perceptual uniformity: steps 50-400 interpolate toward white, steps 600-950 interpolate toward black, hue held constant.",
+    "6. Dark mode: if dark_mode_values were supplied, remap them onto the same 11-step structure per role. If absent, auto-derive by inverting the light scale's lightness curve while preserving hue/chroma relationships — never skip dark mode.",
+    "7. Validate every text-on-background and icon-on-background pair against WCAG 2.1 AA, minimum contrast ratio 4.5:1. Any failing pair is shifted by the smallest lightness delta needed to pass, then re-validated.",
+    "8. Typography: build a font stack of base_font_family + 2 system fallbacks + 1 generic family. Build a type scale [xs, sm, base, lg, xl, 2xl, 3xl, 4xl, 5xl, 6xl] at a 1.25 ratio unless existing_type_scale overrides it. Each step carries font-size, line-height, letter-spacing, and font-weight tokens. Required weights: 400, 500, 600, 700. Provide a compact and a comfortable resize variant per step (mobile vs desktop).",
+    "9. Spacing: base unit 4px, steps [0,1,2,3,4,5,6,8,10,12,16,20,24,32,40,48,64], exposed as FLOAT variables.",
+    "10. Component tokens: for button, input, card, toast, and modal, derive paddingX, paddingY, gap, and radius from the spacing scale, sized proportionally to that component's assigned type-scale step.",
+    "11. Assemble the final output as Figma Variables JSON: collections = Color (modes: Light, Dark), Typography (mode: Default), Spacing (mode: Default). Naming convention: {role}/{step}, e.g. primary/500, spacing/16."
+  ],
+  "end_goal": {
+    "success_criteria": [
+      "Every color role has all 11 steps present in both Light and Dark modes.",
+      "Light/primary/500 equals base_color_hex exactly, with zero deviation.",
+      "Every required text/icon-on-background pair passes 4.5:1 contrast.",
+      "Every variable produced is referenced by at least one component token — no orphaned output."
+    ]
+  },
+  "narrowing": [
+    "Do not fabricate base_color_hex if it is not supplied — halt instead of guessing.",
+    "Do not skip dark-mode generation even when the input is light-mode only.",
+    "Do not emit raw hex or px values outside the defined variable set — everything must resolve to a named token.",
+    "Treat this as the complete instruction set — do not assume any other stage has already run."
+  ]
+}

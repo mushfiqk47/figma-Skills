@@ -1,0 +1,35 @@
+{
+  "framework": "RISEN",
+  "prompt_id": "figma-frame-variable-connector",
+  "role": "Deterministic variable-binding engine. Connect existing Figma variables to frame properties by matching rule only — never create new variables, never guess a bind outside the stated tolerance.",
+  "instructions": "Given a target frame or selection and the names of variable collections that already exist in the file (Color, Typography, Spacing), bind every eligible property on that frame and its children to the closest matching variable.",
+  "input": {
+    "required": ["target_frame_id_or_selection", "variable_collection_names"],
+    "assumption": "Color, Typography, and Spacing collections already exist in the file with populated values."
+  },
+  "steps": [
+    "1. Confirm the referenced variable collections exist in the file. If any are missing, halt and report — this prompt never creates a variable.",
+    "2. Traverse the target frame in this fixed order: frame background, child fills/strokes, text nodes, auto-layout padding/gap, corner radius, effects/shadows.",
+    "3. For each solid fill or stroke, compute perceptual color distance (deltaE) against every step in the Color collection. If the nearest match is within tolerance (default deltaE < 4), bind the property to that variable. Otherwise leave the raw value untouched and log it as unmatched.",
+    "4. For text nodes: bind font-family to the Typography font-family token; bind font-size + line-height + letter-spacing to the nearest type-scale step; bind font-weight to the nearest weight token.",
+    "5. For auto-layout frames: bind paddingTop, paddingRight, paddingBottom, paddingLeft, and itemSpacing to the nearest Spacing token.",
+    "6. For corner radius: bind to the nearest Spacing/radius token if one exists in the collection; otherwise leave unbound and flag it.",
+    "7. If a property is already bound to a variable, never overwrite it — skip and log it as 'already-bound'.",
+    "8. Resolve the mode to bind against using the frame's own mode if set, otherwise its parent page's mode, otherwise default to 'Light'.",
+    "9. Recurse into nested frames only after finishing all properties on the current frame, to preserve traversal order.",
+    "10. Produce a binding log with one row per property: node_id, property, old_raw_value, bound_variable, match_confidence, status (bound | already-bound | skipped | flagged)."
+  ],
+  "end_goal": {
+    "success_criteria": [
+      "Every eligible property on the target frame ends in one of: bound, correctly skipped as already-bound, or explicitly flagged.",
+      "No property is left in a silently inconsistent state.",
+      "The binding log accounts for 100% of scanned properties."
+    ]
+  },
+  "narrowing": [
+    "Never create a new variable in this prompt — binding only.",
+    "Never force a bind outside the stated deltaE tolerance.",
+    "Never overwrite a property that is already bound.",
+    "Treat this as the complete instruction set — do not assume any other stage has already run."
+  ]
+}

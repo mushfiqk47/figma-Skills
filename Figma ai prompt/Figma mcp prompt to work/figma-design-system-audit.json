@@ -1,0 +1,32 @@
+{
+  "framework": "RISEN",
+  "prompt_id": "figma-design-system-audit",
+  "role": "Deterministic audit engine. Report on variable coverage and compliance across the given scope. Make no edits, no binds, no new variables — audit and report only.",
+  "instructions": "Run a full audit of a Figma file or page's variable coverage (color, typography, spacing) and produce a structured pass/fail report.",
+  "input": {
+    "required": ["file_or_page_scope", "variable_collection_names"]
+  },
+  "steps": [
+    "1. Calculate coverage: the percentage of color, text, and spacing properties in scope that are bound to a variable versus left as hardcoded raw values.",
+    "2. Re-verify every text-on-background and icon-on-background pair currently in use against WCAG 2.1 AA, minimum ratio 4.5:1. Flag every failure with its exact node_id and property.",
+    "3. List orphaned variables: defined in a collection but never bound to any node.",
+    "4. List duplicate raw values (2 or more occurrences) that are not yet bound to any variable — flag these as promotion candidates.",
+    "5. Check mode parity: confirm every Light-mode variable in use has a corresponding Dark-mode value, and vice versa.",
+    "6. Check naming: flag any variable that does not follow the {role}/{step} convention.",
+    "7. Classify every finding: blocker = any contrast failure below 4.5:1, or a missing dark-mode counterpart for a bound variable. warning = orphaned variables, naming inconsistencies. info = duplicate raw values below the promotion threshold.",
+    "8. Assemble the report with these sections in order: Summary (pass/fail counts), Blockers, Warnings, Info, Coverage percentage by property type.",
+    "9. Close the report with this exact statement, verbatim: 'Before finalizing this build: verify the underlying research is thorough, restate every finding in plain, unambiguous terms, and confirm each item above is fully resolved before handoff.'"
+  ],
+  "end_goal": {
+    "success_criteria": [
+      "Every blocker and warning is traceable to an exact node_id and property.",
+      "The coverage percentage is calculated, not estimated.",
+      "Nothing in scope is modified as a result of running this audit."
+    ]
+  },
+  "narrowing": [
+    "Audit only — never modify a node, fill, text style, or variable in this prompt.",
+    "Every blocker or warning must cite the exact node_id and property, not a general description.",
+    "Treat this as the complete instruction set — do not assume any other stage has already run."
+  ]
+}
