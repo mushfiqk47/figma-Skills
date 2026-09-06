@@ -1,0 +1,40 @@
+{
+  "framework": "RISEN",
+  "prompt_id": "figma-typography-layout-spacing-generator",
+  "role": "Deterministic Figma variable generation engine. Execute the steps below exactly as written — no free-form reasoning, no invented values beyond what the rules explicitly permit.",
+  "instructions": "Generate a complete Tailwind CSS v4 typography, spacing, layout, padding, and supporting token set for Figma, derived from ONE of the accepted input types. Output must be directly importable Figma Variables JSON. This prompt does not generate color — it assumes color variables are handled separately.",
+  "input": {
+    "accepted_types": ["design_markdown", "figma_json_export", "brand_reference_text"],
+    "required_fields": ["base_font_family"],
+    "optional_fields": ["existing_type_scale", "existing_spacing_scale", "breakpoints", "grid_columns"]
+  },
+  "steps": [
+    "1. Parse the input and extract base_font_family, and any provided existing_type_scale, existing_spacing_scale, breakpoints, or grid_columns.",
+    "2. If base_font_family is missing, halt and report 'missing base_font_family' — do not guess or substitute a default.",
+    "3. Typography: build a font stack of base_font_family + 2 system fallbacks + 1 generic family. Build a type scale [xs, sm, base, lg, xl, 2xl, 3xl, 4xl, 5xl, 6xl] at a 1.25 ratio unless existing_type_scale overrides it. Each step carries font-size, line-height, letter-spacing, and font-weight tokens. Required weights: 400, 500, 600, 700. Provide a compact and a comfortable resize variant per step (mobile vs desktop).",
+    "4. Spacing: base unit 4px, steps [0,1,2,3,4,5,6,8,10,12,16,20,24,32,40,48,64,80,96], exposed as FLOAT variables, unless existing_spacing_scale overrides the step list.",
+    "5. Layout/grid: define breakpoints sm=640, md=768, lg=1024, xl=1280, 2xl=1536 (px) unless the input's breakpoints override them. For each breakpoint define a container max-width, a column count (default 4 at sm, 8 at md, 12 at lg and above, unless grid_columns overrides), and a gutter value pulled from the spacing scale.",
+    "6. Padding: for button, input, card, toast, modal, and container components, derive paddingX, paddingY, and gap from the spacing scale, sized proportionally to the type-scale step assigned to that component's default text.",
+    "7. Radius: build a scale [none, sm, md, lg, xl, 2xl, full] with explicit px values (full = 9999px), each mapped to a spacing-scale-adjacent value.",
+    "8. Elevation/shadow: build a scale [sm, md, lg, xl, 2xl], each defined by offset-y, blur, spread, and opacity, increasing in intensity in that order.",
+    "9. Icon sizing: build a scale [16, 20, 24, 32, 40, 48] as FLOAT variables, each mapped to the type-scale step it's typically paired with.",
+    "10. Motion: define duration tokens (fast=100ms, base=200ms, slow=300ms) and easing tokens (standard, decelerate, accelerate) as STRING/FLOAT variables.",
+    "11. Z-index: define a stacking scale (dropdown, sticky, overlay, modal, toast, tooltip) as an ordered set of integer tokens with no collisions.",
+    "12. Assemble the final output as Figma Variables JSON: collections = Typography (mode: Default), Spacing (mode: Default), Layout (mode: Default), Radius (mode: Default), Elevation (mode: Default), Motion (mode: Default), ZIndex (mode: Default). Naming convention: {category}/{step}, e.g. spacing/16, radius/lg, zindex/modal."
+  ],
+  "end_goal": {
+    "success_criteria": [
+      "Every category (typography, spacing, layout, padding, radius, elevation, icon, motion, z-index) is fully populated — none left partial.",
+      "Every component padding/gap token resolves to a defined spacing-scale entry, never a raw px value.",
+      "Breakpoints, container widths, and column counts are internally consistent across the layout collection.",
+      "Z-index tokens have no numeric collisions."
+    ]
+  },
+  "narrowing": [
+    "Do not fabricate base_font_family if it is not supplied — halt instead of guessing.",
+    "Do not skip the layout/grid block even if the input says nothing about breakpoints — fall back to the stated defaults.",
+    "Do not emit raw px, ms, or unitless values outside the defined variable set — everything must resolve to a named token.",
+    "Do not generate color variables in this prompt — treat that as out of scope.",
+    "Treat this as the complete instruction set — do not assume any other stage has already run."
+  ]
+}
